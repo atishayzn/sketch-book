@@ -2,6 +2,7 @@ import { MENU_ITEMS } from "@/constant";
 import { actionItemClick } from "@/slice/menuSlice";
 import { useRef,useEffect } from "react";
 import { useSelector,useDispatch } from "react-redux";
+import { socket } from "@/socket";
 
 const Board=()=>{
     const canvasRef= useRef(null);
@@ -33,10 +34,12 @@ const Board=()=>{
         const handleMouseDown = (e) => {
             shouldDraw.current = true
             beginPath(e.clientX, e.clientY)
+            socket.emit('beginPath',{x:e.clientX,y:e.clientY})
         }
         const handleMouseMove = (e) => {
             if (!shouldDraw.current) return
             drawLine(e.clientX, e.clientY)
+            socket.emit('drawLine',{x:e.clientX,y:e.clientY})
         }
         const handleMouseUp = (e) => {
             shouldDraw.current = false
@@ -44,13 +47,24 @@ const Board=()=>{
             drawHistory.current.push(imageData)
             historyPointer.current = drawHistory.current.length - 1
         }
+        const handleBeginPath=(arg)=>{
+            beginPath(arg.x,arg.y)
+        }
+        const handleDrawLine=(arg)=>{
+            drawLine(arg.x,arg.y)
+        }
         canvas.addEventListener('mousedown', handleMouseDown)
         canvas.addEventListener('mousemove', handleMouseMove)
         canvas.addEventListener('mouseup', handleMouseUp)
+        socket.on('beginPath',handleBeginPath)
+        socket.on('drawLine',handleDrawLine)
+
         return () => {
             canvas.removeEventListener('mousedown', handleMouseDown)
             canvas.removeEventListener('mousemove', handleMouseMove)
             canvas.removeEventListener('mouseup', handleMouseUp)
+            socket.off('beginPath',handleBeginPath)
+            socket.off('drawLine',handleDrawLine)
         }
     },[])
     useEffect(() => {
@@ -68,6 +82,7 @@ const Board=()=>{
             changeConfig(config.color, config.size)
         }
         changeConfig(color, size)
+        socket.on('changeConfig',handleChangeConfig)
     }, [color, size])
 
     useEffect(()=>{
